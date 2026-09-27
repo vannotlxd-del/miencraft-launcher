@@ -126,7 +126,19 @@ class NightLauncherApp:
 
         self.config = self._load_config()
         self.downloads_dir = DOWNLOADS_DIR
+        self.versions_dir = BASE_DIR / "versions"
+        self.mods_dir = BASE_DIR / "mods"
+        self.resourcepacks_dir = BASE_DIR / "resourcepacks"
+        self.shaders_dir = BASE_DIR / "shaders"
+        self.worlds_dir = BASE_DIR / "worlds"
+        self.java_dir = BASE_DIR / "runtime"
         self.downloads_dir.mkdir(exist_ok=True)
+        self.versions_dir.mkdir(exist_ok=True)
+        self.mods_dir.mkdir(exist_ok=True)
+        self.resourcepacks_dir.mkdir(exist_ok=True)
+        self.shaders_dir.mkdir(exist_ok=True)
+        self.worlds_dir.mkdir(exist_ok=True)
+        self.java_dir.mkdir(exist_ok=True)
 
         self.profile = {
             "username": self.config.get("username", "PlayerOne"),
@@ -136,6 +148,7 @@ class NightLauncherApp:
             "version": self.config.get("version", "1.21.1"),
             "loader": self.config.get("loader", "fabric"),
         }
+        self.installed_versions = self.config.get("installed_versions", {})
 
         self.friends = self.config.get("friends", ["Steve", "Alex", "Notch"]) 
         self.chat_log = self.config.get("chat_log", [
@@ -162,6 +175,48 @@ class NightLauncherApp:
     def _save_config(self):
         with CONFIG_PATH.open("w", encoding="utf-8") as f:
             json.dump(self.config, f, indent=2)
+
+    def _download_url(self, url: str, target_path: Path) -> str:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        request.urlretrieve(url, str(target_path))
+        return str(target_path)
+
+    def _install_java(self, version: str = "21"):
+        java_url = {
+            "17": "https://github.com/adoptium/temurin17-binaries/releases/latest/download/OpenJDK17U-jdk_x64_windows_hotspot_17.0.13_11.zip",
+            "21": "https://github.com/adoptium/temurin21-binaries/releases/latest/download/OpenJDK21U-jdk_x64_windows_hotspot_21.0.5_11.zip",
+            "25": "https://github.com/adoptium/temurin25-binaries/releases/latest/download/OpenJDK25U-jdk_x64_windows_hotspot_25.0.0_3.zip",
+        }.get(version, "https://github.com/adoptium/temurin21-binaries/releases/latest/download/OpenJDK21U-jdk_x64_windows_hotspot_21.0.5_11.zip")
+
+        target = self.java_dir / f"jdk-{version}.zip"
+        try:
+            self._download_url(java_url, target)
+            self.profile["java_path"] = str(self.java_dir / f"jdk-{version}")
+            self.java_path_var.set(self.profile["java_path"])
+            self.java_var.set(self.profile["java_path"])
+            self.config["java_path"] = self.profile["java_path"]
+            self._save_config()
+            messagebox.showinfo("Java siap", f"Java {version} berhasil didownload ke {self.java_dir}.")
+        except Exception as exc:
+            messagebox.showerror("Java gagal diinstall", str(exc))
+
+    def _install_loader(self, loader: str):
+        loader_map = {
+            "fabric": "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar",
+            "forge": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar",
+            "quilt": "https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-installer/0.11.0/quilt-installer-0.11.0.jar",
+        }
+        url = loader_map.get(loader.lower(), loader_map["fabric"])
+        target = self.downloads_dir / f"{loader.lower()}_installer.jar"
+        try:
+            self._download_url(url, target)
+            self.profile["loader"] = loader.lower()
+            self.loader_var.set(self.profile["loader"])
+            self.config["loader"] = self.profile["loader"]
+            self._save_config()
+            messagebox.showinfo("Loader siap", f"Installer {loader.upper()} berhasil didownload ke {target}.")
+        except Exception as exc:
+            messagebox.showerror("Download loader gagal", str(exc))
 
     def _detect_java_path(self) -> str:
         candidates = []
@@ -290,6 +345,18 @@ class NightLauncherApp:
                 ttk.Combobox(card, textvariable=var, values=[v["name"] for v in VERSION_CATALOG], state="readonly", width=34).grid(row=idx, column=1, sticky="ew")
 
         tk.Button(card, text="Save profile", bg="#3b82f6", fg="white", command=self._save_profile).grid(row=len(rows), column=0, columnspan=2, sticky="ew", pady=(12, 0))
+
+        button_row = tk.Frame(card, bg="#0f172a")
+        button_row.grid(row=len(rows) + 1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        tk.Button(button_row, text="Install Java 17", bg="#14b8a6", fg="white", command=lambda: self._install_java("17")).pack(side="left", padx=(0, 8), fill="x", expand=True)
+        tk.Button(button_row, text="Install Java 21", bg="#14b8a6", fg="white", command=lambda: self._install_java("21")).pack(side="left", padx=8, fill="x", expand=True)
+        tk.Button(button_row, text="Install Java 25", bg="#14b8a6", fg="white", command=lambda: self._install_java("25")).pack(side="left", padx=8, fill="x", expand=True)
+
+        loader_row = tk.Frame(card, bg="#0f172a")
+        loader_row.grid(row=len(rows) + 2, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        tk.Button(loader_row, text="Install Fabric", bg="#8b5cf6", fg="white", command=lambda: self._install_loader("fabric")).pack(side="left", padx=(0, 8), fill="x", expand=True)
+        tk.Button(loader_row, text="Install Forge", bg="#8b5cf6", fg="white", command=lambda: self._install_loader("forge")).pack(side="left", padx=8, fill="x", expand=True)
+        tk.Button(loader_row, text="Install Quilt", bg="#8b5cf6", fg="white", command=lambda: self._install_loader("quilt")).pack(side="left", padx=8, fill="x", expand=True)
 
     def _build_versions_tab(self):
         self.version_tree = ttk.Treeview(self.versions_tab, columns=("name", "type", "java", "status"), show="headings", height=18)
@@ -432,6 +499,7 @@ class NightLauncherApp:
             "account_name": self.profile["account_name"],
             "friends": self.friends,
             "chat_log": self.chat_log,
+            "installed_versions": self.installed_versions,
         })
         self._save_config()
         messagebox.showinfo("Profile saved", "Profile launcher berhasil disimpan.")
