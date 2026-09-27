@@ -6,9 +6,14 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
+    name: Build ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -33,24 +38,35 @@ jobs:
         run: |
           pyinstaller --onefile --name NightLauncher --noconsole night_launcher.py
 
-      - name: Upload artifact for Linux
-        if: matrix.os == 'ubuntu-latest'
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NightLauncher-linux
-          path: dist/NightLauncher
+          name: ${{ matrix.os == 'windows-latest' && 'NightLauncher-windows' || 'NightLauncher-linux' }}
+          path: |
+            dist/NightLauncher.exe
+            dist/NightLauncher
+          if-no-files-found: error
 
-      - name: Upload artifact for Windows
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+  release:
+    name: Publish GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: NightLauncher-windows
-          path: dist/NightLauncher.exe
+          path: release-artifacts
+
+      - name: Show artifact files
+        run: find release-artifacts -maxdepth 2 -type f | sort
 
       - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/NightLauncher
-            dist/NightLauncher.exe
+            release-artifacts/NightLauncher-windows/NightLauncher.exe
+            release-artifacts/NightLauncher-linux/NightLauncher

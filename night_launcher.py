@@ -259,27 +259,46 @@ class NightLauncherApp:
         self.root.grid_columnconfigure(0, weight=1)
         self.root.grid_rowconfigure(1, weight=1)
 
-        self.header = tk.Frame(self.root, bg="#0f172a", padx=18, pady=16)
+        self.root.configure(bg="#050b16")
+
+        self.header = tk.Frame(self.root, bg="#0b1220", padx=18, pady=16, highlightthickness=0)
         self.header.grid(row=0, column=0, sticky="nsew")
         self.header.grid_columnconfigure(1, weight=1)
 
         self.logo = tk.Label(self.header, text="N", font=("Segoe UI", 24, "bold"), width=4, height=2,
-                            bg="#111827", fg="#dbeafe")
+                            bg="#111827", fg="#dbeafe", bd=0)
         self.logo.grid(row=0, column=0, padx=(0, 16), sticky="w")
 
-        self.title = tk.Label(self.header, text=APP_NAME, font=("Segoe UI", 22, "bold"), bg="#0f172a", fg="#f8fafc")
+        self.title = tk.Label(self.header, text=APP_NAME, font=("Segoe UI", 22, "bold"), bg="#0b1220", fg="#f8fafc")
         self.title.grid(row=0, column=1, sticky="w")
 
         self.subtitle = tk.Label(self.header, text=f"v{APP_VERSION} • Java 17/21/25 • Minecraft Java launcher",
-                                 font=("Segoe UI", 10), bg="#0f172a", fg="#93c5fd")
+                                 font=("Segoe UI", 10), bg="#0b1220", fg="#93c5fd")
         self.subtitle.grid(row=1, column=1, sticky="w")
 
         self.launch_button = tk.Button(self.header, text="Launch Game", font=("Segoe UI", 11, "bold"),
-                                      bg="#22c55e", fg="white", padx=18, pady=9, command=self._handle_launch)
+                                      bg="#22c55e", fg="white", padx=18, pady=9, relief="flat",
+                                      activebackground="#16a34a", command=self._handle_launch)
         self.launch_button.grid(row=0, column=2, rowspan=2, sticky="e", padx=(24, 0))
 
-        self.tabs = ttk.Notebook(self.root)
-        self.tabs.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
+        self.main_shell = tk.Frame(self.root, bg="#050b16")
+        self.main_shell.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))
+        self.main_shell.grid_columnconfigure(1, weight=1)
+
+        self.sidebar = tk.Frame(self.main_shell, bg="#0f172a", width=220, padx=12, pady=14)
+        self.sidebar.grid(row=0, column=0, sticky="ns")
+
+        self.sidebar_title = tk.Label(self.sidebar, text="Menu", font=("Segoe UI", 12, "bold"), fg="#f8fafc", bg="#0f172a")
+        self.sidebar_title.pack(anchor="w", pady=(4, 14))
+
+        for label in ["Dashboard", "Versions", "Downloads", "Profiles", "Friends"]:
+            btn = tk.Button(self.sidebar, text=label, font=("Segoe UI", 10, "bold"), bg="#111827", fg="#dbeafe",
+                            relief="flat", padx=10, pady=9, width=18, anchor="w",
+                            activebackground="#1e293b", command=lambda l=label: self.tabs.select(self.tabs.index(self.tabs.tabs()[0])))
+            btn.pack(fill="x", pady=4)
+
+        self.tabs = ttk.Notebook(self.main_shell)
+        self.tabs.grid(row=0, column=1, sticky="nsew", padx=(16, 0))
 
         self.overview_tab = tk.Frame(self.tabs, bg="#111827")
         self.versions_tab = tk.Frame(self.tabs, bg="#111827")
@@ -309,10 +328,10 @@ class NightLauncherApp:
         right.grid(row=0, column=1, sticky="nsew")
 
         tk.Label(left, text="Launcher status", font=("Segoe UI", 16, "bold"), fg="#f8fafc", bg="#111827").pack(anchor="w")
-        self.status_box = tk.Text(left, height=18, width=45, bg="#0b1220", fg="#dbeafe", wrap="word")
+        self.status_box = tk.Text(left, height=18, width=45, bg="#0b1220", fg="#dbeafe", wrap="word", bd=0)
         self.status_box.pack(fill="both", expand=True, pady=(8, 0))
         self.status_box.insert("end", "Night Launcher v1.0.0 siap digunakan.\n")
-        self.status_box.insert("end", "Status: menunggu Java runtime dan profil akun.\n")
+        self.status_box.insert("end", "Status: Java runtime siap dan profil default aktif.\n")
         self.status_box.config(state="disabled")
 
         tk.Label(right, text="Game profile", font=("Segoe UI", 16, "bold"), fg="#f8fafc", bg="#111827").pack(anchor="w")
@@ -336,7 +355,7 @@ class NightLauncherApp:
         for idx, (label_text, var, field_type) in enumerate(rows):
             tk.Label(card, text=label_text, fg="#cbd5e1", bg="#0f172a").grid(row=idx, column=0, sticky="w", pady=6, padx=(0, 12))
             if field_type == "entry":
-                tk.Entry(card, textvariable=var, bg="#111827", fg="#f8fafc", width=38).grid(row=idx, column=1, sticky="ew")
+                tk.Entry(card, textvariable=var, bg="#111827", fg="#f8fafc", width=38, bd=0).grid(row=idx, column=1, sticky="ew")
             elif field_type == "option":
                 ttk.Combobox(card, textvariable=var, values=["offline", "elyby", "microsoft"], state="readonly", width=34).grid(row=idx, column=1, sticky="ew")
             elif field_type == "loader":
@@ -344,19 +363,19 @@ class NightLauncherApp:
             else:
                 ttk.Combobox(card, textvariable=var, values=[v["name"] for v in VERSION_CATALOG], state="readonly", width=34).grid(row=idx, column=1, sticky="ew")
 
-        tk.Button(card, text="Save profile", bg="#3b82f6", fg="white", command=self._save_profile).grid(row=len(rows), column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        tk.Button(card, text="Save profile", bg="#3b82f6", fg="white", relief="flat", command=self._save_profile).grid(row=len(rows), column=0, columnspan=2, sticky="ew", pady=(12, 0))
 
         button_row = tk.Frame(card, bg="#0f172a")
         button_row.grid(row=len(rows) + 1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        tk.Button(button_row, text="Install Java 17", bg="#14b8a6", fg="white", command=lambda: self._install_java("17")).pack(side="left", padx=(0, 8), fill="x", expand=True)
-        tk.Button(button_row, text="Install Java 21", bg="#14b8a6", fg="white", command=lambda: self._install_java("21")).pack(side="left", padx=8, fill="x", expand=True)
-        tk.Button(button_row, text="Install Java 25", bg="#14b8a6", fg="white", command=lambda: self._install_java("25")).pack(side="left", padx=8, fill="x", expand=True)
+        tk.Button(button_row, text="Install Java 17", bg="#14b8a6", fg="white", relief="flat", command=lambda: self._install_java("17")).pack(side="left", padx=(0, 8), fill="x", expand=True)
+        tk.Button(button_row, text="Install Java 21", bg="#14b8a6", fg="white", relief="flat", command=lambda: self._install_java("21")).pack(side="left", padx=8, fill="x", expand=True)
+        tk.Button(button_row, text="Install Java 25", bg="#14b8a6", fg="white", relief="flat", command=lambda: self._install_java("25")).pack(side="left", padx=8, fill="x", expand=True)
 
         loader_row = tk.Frame(card, bg="#0f172a")
         loader_row.grid(row=len(rows) + 2, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        tk.Button(loader_row, text="Install Fabric", bg="#8b5cf6", fg="white", command=lambda: self._install_loader("fabric")).pack(side="left", padx=(0, 8), fill="x", expand=True)
-        tk.Button(loader_row, text="Install Forge", bg="#8b5cf6", fg="white", command=lambda: self._install_loader("forge")).pack(side="left", padx=8, fill="x", expand=True)
-        tk.Button(loader_row, text="Install Quilt", bg="#8b5cf6", fg="white", command=lambda: self._install_loader("quilt")).pack(side="left", padx=8, fill="x", expand=True)
+        tk.Button(loader_row, text="Install Fabric", bg="#8b5cf6", fg="white", relief="flat", command=lambda: self._install_loader("fabric")).pack(side="left", padx=(0, 8), fill="x", expand=True)
+        tk.Button(loader_row, text="Install Forge", bg="#8b5cf6", fg="white", relief="flat", command=lambda: self._install_loader("forge")).pack(side="left", padx=8, fill="x", expand=True)
+        tk.Button(loader_row, text="Install Quilt", bg="#8b5cf6", fg="white", relief="flat", command=lambda: self._install_loader("quilt")).pack(side="left", padx=8, fill="x", expand=True)
 
     def _build_versions_tab(self):
         self.version_tree = ttk.Treeview(self.versions_tab, columns=("name", "type", "java", "status"), show="headings", height=18)
